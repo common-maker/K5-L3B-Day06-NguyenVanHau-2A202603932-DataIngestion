@@ -2,6 +2,7 @@
 
 - **Họ và tên:** Nguyễn Văn Hậu
 - **MSSV:** 2A202603932
+- **Lớp:** L3B
 
 ## Dữ liệu và pipeline
 - **Chủ đề, nguồn/quyền, số trang và quy tắc tính trang:**
@@ -22,11 +23,11 @@
     - **Chống trùng & cập nhật tài liệu đổi:** `PgVectorStore.upsert()` khóa chính `(strategy, chunk_id)` dùng `ON CONFLICT DO UPDATE` (cập nhật text, `content_hash` SHA-256, `metadata`, `embedding`) và xóa các chunk dư thừa (`DELETE ... WHERE strategy = %s AND document_id = %s AND NOT (chunk_id = ANY(%s))`) khi tài liệu thay đổi số chunk, kèm `prune_missing_documents=True` khi bỏ tài liệu khỏi manifest. Kiểm chứng thực tế trên B cho kết quả nạp lại `328 -> 328` chunk (không nhân đôi) và probe rút gọn chunk giảm `2 -> 1` (`passed: true`, `results/run_metadata_dev.json`).
   - **Lệnh chạy (từ `starter/`) & thời điểm chạy:**
     - Khởi động DB & kiểm tra kết nối: `docker compose -p day6_student_starter up -d --wait`, sau đó `.\.venv\Scripts\python.exe scripts\check_setup.py`
-    - Ingest + benchmark `dev` + mẫu coherence + probe idempotency (`2026-11-14T03:01:15Z`): `.\.venv\Scripts\python.exe -m src.run --split dev`
-    - Đánh giá toàn bộ (`dev` + `test` đóng băng) không ingest lại (`2026-11-14T03:07:36Z`): `.\.venv\Scripts\python.exe -m src.run --split all --skip-ingest`
-  - **Chi phí & thời gian thực tế (`results/run_metadata_dev.json` & `results/run_metadata_all.json`):**
-    - Ingest đầy đủ corpus (`dev` run): A mất `7.383s` (`49,366` tokens, `$0.000987`), B mất `3.785s` (`44,429` tokens, `$0.000889`), C mất `0.956s` DB upsert (`0` token embedding thêm do tái dùng chunk B, `$0.0`).
-    - Truy vấn toàn bộ 22 câu (`all` run với `--skip-ingest`): `6.501s` embed query (`487` tokens, `$0.000010` dùng chung A/B/C); SQL search `A: 0.808s`, `B: 0.7249s`, `C: 0.8012s`. Tổng chi phí OpenAI API thực tế cho toàn bộ lab là `$0.001886` (`< $0.002`).
+    - Chạy `dev` (`2026-11-14T03:01:15Z`, `results/run_metadata_dev.json`): `.\.venv\Scripts\python.exe -m src.run --split dev`
+    - Chạy toàn bộ `dev + test` đóng băng (`2026-11-14T03:28:39Z`, `skip_ingest: false`, `results/run_metadata_all.json`): `.\.venv\Scripts\python.exe -m src.run --split all` (có thể dùng thêm `--skip-ingest` nếu chỉ cần chạy lại phần eval)
+  - **Chi phí & thời gian thực tế (`results/run_metadata_all.json` & `results/run_metadata_dev.json`):**
+    - Lần chạy toàn phần (`all`, `skip_ingest: false`): ingest A mất `8.068s` (`7.196s` embed + `0.873s` DB, `49,366` tokens, `$0.000987`), B mất `2.772s` (`2.296s` embed + `0.476s` DB, `44,429` tokens, `$0.000889`), C mất `0.376s` DB upsert (`0` token embedding thêm do tái dùng chunk B, `$0.0`); embed chung `22` câu query mất `4.249s` (`487` tokens, `$0.000010`), SQL search `A: 0.8553s`, `B: 0.7047s`, `C: 0.7838s`. Tổng chi phí lần chạy toàn phần là `$0.001886` (`94,282` prompt tokens, `< $0.002`).
+    - Tham chiếu lần chạy `dev` trước đó (`03:01:15Z`): ingest `A: 7.383s`, `B: 3.785s`, `C: 0.956s`; embed `17` câu query hết `3.543s` (`379` tokens, `$0.000008`), SQL search `A: 1.2072s`, `B: 1.033s`, `C: 0.843s` (tổng `$0.001883`, `94,174` tokens).
 - **Metadata bắt buộc, trường lọc bổ sung, kiểu dữ liệu, nguồn giá trị và lý do chọn:**
   - **Bắt buộc:** `document_id` (`str`, từ `source_id` trong `manifest.json`), `source` (`str`, đường dẫn PDF), `page` (`int`, trang vật lý 1-based).
   - **Bổ sung phục vụ lọc & truy vết:** `year` (`int`: `2023`/`2024`, từ `manifest.json`), `document_type` (`str`: `core_framework`/`genai_profile`, từ `manifest.json`), `section` (`str`: `executive_summary`, `introduction`, `foundational`, `genai_risks`, `govern`, `map`, `measure`, `manage`, `profiles`, `appendix` — trích xuất xác định từ tiêu đề mục/bảng NIST bằng `detect_section_from_text`), cùng JSONB `version` (`str`), `language` (`str`), `title` (`str`), `char_start`/`char_end` (`int` ở A), `chunk_length` (`int`), `raw_chars`/`normalized_chars` (`int`).
@@ -49,14 +50,14 @@
 ## Kết quả
 | Strategy | Split | Hit@1 (n/N) | Evidence Hit@3 (n/N) | Chunk count | Thời gian | Chi phí |
 |---|---|---|---|---|---|---|
-| A | dev | 9/17 (52.9%) | 11/17 (64.7%) | 559 | 7.383s ingest (`run_metadata_dev`) | `$0.000987` ingest |
-| A | test | 2/5 (40.0%) | 2/5 (40.0%) | 559 | 0.808s search / 22q (`run_metadata_all`, `--skip-ingest`) | dùng chung `$0.000010` (22 query) |
-| B | dev | 11/17 (64.7%) | 13/17 (76.5%) | 328 | 3.785s ingest (`run_metadata_dev`) | `$0.000889` ingest |
-| B | test | 5/5 (100.0%) | 5/5 (100.0%) | 328 | 0.725s search / 22q (`run_metadata_all`, `--skip-ingest`) | dùng chung `$0.000010` (22 query) |
-| C | dev | 12/17 (70.6%) | 14/17 (82.4%) | 328 | 0.956s DB upsert (`run_metadata_dev`) | `$0.0` thêm khi ingest |
-| C | test | 5/5 (100.0%) | 5/5 (100.0%) | 328 | 0.801s search / 22q (`run_metadata_all`, `--skip-ingest`) | dùng chung `$0.000010` (22 query) |
+| A | dev | 9/17 (52.9%) | 11/17 (64.7%) | 559 | 7.383s ingest + 1.207s search (`run_metadata_dev`) | `$0.000987` ingest |
+| A | test | 2/5 (40.0%) | 2/5 (40.0%) | 559 | 8.068s ingest + 0.855s search / 22q (`run_metadata_all`) | `$0.000987` ingest + dùng chung `$0.000010` (22q) |
+| B | dev | 11/17 (64.7%) | 13/17 (76.5%) | 328 | 3.785s ingest + 1.033s search (`run_metadata_dev`) | `$0.000889` ingest |
+| B | test | 5/5 (100.0%) | 5/5 (100.0%) | 328 | 2.772s ingest + 0.705s search / 22q (`run_metadata_all`) | `$0.000889` ingest + dùng chung `$0.000010` (22q) |
+| C | dev | 12/17 (70.6%) | 14/17 (82.4%) | 328 | 0.956s DB upsert + 0.843s search (`run_metadata_dev`) | `$0.0` thêm khi ingest |
+| C | test | 5/5 (100.0%) | 5/5 (100.0%) | 328 | 0.376s DB upsert + 0.784s search / 22q (`run_metadata_all`) | `$0.0` thêm + dùng chung `$0.000010` (22q) |
 
-*Ghi chú đo đạc: Lần chạy `--split all --skip-ingest` embed chung một batch 22 câu query (`6.501s` cho `487` tokens, `$0.000010`); thời gian và chi phí ingest corpus đầy đủ được lấy từ `run_metadata_dev.json` trên đúng 95 trang và bảng `rag_chunks` đang phục vụ truy vấn.*
+*Ghi chú đo đạc: Lần chạy cuối `run_metadata_all.json` (`2026-11-14T03:28:39Z`, `skip_ingest: false`) ingest lại đủ corpus cho A/B/C và embed chung một batch 22 câu (`4.249s` cho `487` query tokens, `$0.000010`; tổng cả run `94,282` tokens, `$0.001886`). Lần chạy `run_metadata_dev.json` (`03:01:15Z`) đo `17` câu `dev` hết `3.543s` embed query (`379` tokens, `$0.000008`; tổng `$0.001883`).*
 
 | Strategy | Coherence trung bình /2 (n) | Metadata đủ và đúng (n/N) | Filter tuân thủ (n/N hoặc N/A) | Grounding 0/1/2 (số câu) và trung bình /2 |
 |---|---|---|---|---|
@@ -74,7 +75,7 @@
 
 ## Phân tích và kết luận
 - **So sánh A–B và B–C; các ví dụ sai có ID câu và nguồn:**
-  - **A vs B:** Chunk theo đoạn (`B`) vượt trội rõ rệt so với cắt cứng 500 ký tự (`A`): `Evidence Hit@3` tăng từ `11/17 (64.7%)` lên `13/17 (76.5%)` ở `dev` và từ `2/5 (40.0%)` lên `5/5 (100.0%)` ở `test`; coherence tăng `1.00 -> 1.90/2`; grounding test tăng `1.60 -> 2.00/2`; đồng thời số chunk giảm `41.3%` (`559 -> 328`), giảm chi phí embed (`$0.000987 -> $0.000889`) và thời gian ingest (`7.383s -> 3.785s`). Nguyên nhân cốt lõi là A tìm đúng trang (`PageHit@3 = 14/17` dev và `5/5` test), nhưng ranh giới cố định cắt nát bằng chứng:
+  - **A vs B:** Chunk theo đoạn (`B`) vượt trội rõ rệt so với cắt cứng 500 ký tự (`A`): `Evidence Hit@3` tăng từ `11/17 (64.7%)` lên `13/17 (76.5%)` ở `dev` và từ `2/5 (40.0%)` lên `5/5 (100.0%)` ở `test`; coherence tăng `1.00 -> 1.90/2`; grounding test tăng `1.60 -> 2.00/2`; đồng thời số chunk giảm `41.3%` (`559 -> 328`), giảm chi phí embed (`$0.000987 -> $0.000889`) và thời gian ingest (`8.068s -> 2.772s` ở lần chạy `all`; `7.383s -> 3.785s` ở lần chạy `dev`). Nguyên nhân cốt lõi là A tìm đúng trang (`PageHit@3 = 14/17` dev và `5/5` test), nhưng ranh giới cố định cắt nát bằng chứng:
     - **Ví dụ sai 1 (`A`, câu `q22` — `nist-ai-100-1`, trang 37):** Rank 1 (`nist-ai-100-1:p037:fixed:002`) bắt đầu giữa từ `"ive residual risks..."`, làm rụng nhãn `"MANAGE 1.4: Negative"`; các rank 2–3 (`p.13`, `p.9`) chỉ nói về residual risk chung nên grounding chỉ đạt `1/2` và rớt `Evidence Hit@3`. Tương tự ở câu **`q18` (`nist-ai-100-1`, trang 20)**, rank 2 (`p020:fixed:001`) cắt đứt cụm `"in the face of"`, làm mất phần định nghĩa `"secure"` và `"degrade safely and gracefully"`. (Trên `dev`, `q05` và `q12` cũng trượt `Evidence Hit@3` dù `PageHit@3=True`.)
     - Ngược lại, nhược điểm của B là chunk dài hơn (mean `722.0` ký tự) làm loãng vector khi câu hỏi nhắm vào một câu đơn nằm xen trong bảng dài (vd. `dev q07` trên `100-1` p.34 và `dev q14` trên `600-1` p.53 — nơi A trúng rank 1 còn B trượt top-3).
   - **B vs C:** Giữ nguyên toàn bộ 328 chunk và vector của B (`$0.0` chi phí embed thêm), lọc metadata ở C nâng `dev Evidence Hit@3` từ `13/17 (76.5%)` lên `14/17 (82.4%)` (`Hit@1`: `11/17 -> 12/17`), giữ `5/5 (100%)` ở `test`, đạt tuân thủ filter `5/5` (`3/3 dev + 2/2 test`) và loại bỏ nhiễu chéo section ở tất cả câu có filter (`q15`, `q16`, `q17`, `q21`, `q22`):
@@ -85,7 +86,7 @@
 - **Hạn chế của dữ liệu, nhãn, test nhỏ, đo thời gian/chi phí:**
   - Tập `test` chỉ gồm 5 câu nên cả B và C cùng đạt trần `5/5`, chưa thể hiện hết chênh lệch bằng chỉ số tự động mà phải dựa thêm vào `dev` (`q15`–`q17`) và `audit_metadata.csv` (`q21`, `q22`); không nên suy rộng kết luận cho toàn bộ các loại tài liệu ngoài corpus NIST.
   - Mẫu coherence cố định 10 vị trí mở đầu trang (`chunk 000`) chỉ ra điểm gãy page-break ở `600-1` p.53 (`1/2`), nhưng chưa kiểm tra toàn bộ 328 chunk giữa trang.
-  - Vì lần chạy `all` dùng `--skip-ingest` để không trả phí embed lại toàn corpus, số liệu thời gian/chi phí ingest gắn với lần chạy `dev` trước đó trên cùng dữ liệu trong `rag_chunks`.
+  - Thời gian `search_seconds` trong `run_metadata_all.json` được đo gộp cho toàn batch 22 câu (`dev + test`), còn `embed_seconds` chịu biến động độ trễ mạng API giữa các lần chạy (vd. ingest B mất `3.785s` ở lần `dev` và `2.772s` ở lần `all`); ngoài ra chưa đánh giá độ chính xác câu trả lời LLM đầu cuối do scope bài dừng ở retrieval grounding.
 - **Nếu làm lại hoặc mở rộng, cải tiến gì?**
   1. Nối câu vắt qua ranh giới trang vật lý trước khi chia đoạn để xử lý dứt điểm lỗi cắt đầu trang như `nist-ai-600-1` p.52→p.53.
   2. Tách các bảng hành động NIST theo từng đơn vị `Action ID` (`GV-x`, `MP-x`, `MS-x`, `MG-x`) kèm tiêu đề subcategory cha (parent-child chunking) để vừa giữ trọn cấu trúc, vừa khắc phục loãng ngữ nghĩa như `q07`, `q14`.
