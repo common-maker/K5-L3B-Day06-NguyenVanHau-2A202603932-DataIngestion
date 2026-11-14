@@ -1,0 +1,32 @@
+{
+  "A": {
+    "chunking": "fixed_size(500, overlap=50)",
+    "count": 559,
+    "total_chars": 260331,
+    "min_chars": 52,
+    "median_chars": 500,
+    "mean_chars": 465.7,
+    "p95_chars": 500,
+    "max_chars": 500
+  },
+  "B": {
+    "chunking": "by_paragraph(max_size=1000)",
+    "count": 328,
+    "total_chars": 236808,
+    "min_chars": 15,
+    "median_chars": 808.0,
+    "mean_chars": 722.0,
+    "p95_chars": 988,
+    "max_chars": 999
+  },
+  "C": {
+    "chunking": "by_paragraph(max_size=1000, shared with B)",
+    "count": 328,
+    "total_chars": 236808,
+    "min_chars": 15,
+    "median_chars": 808.0,
+    "mean_chars": 722.0,
+    "p95_chars": 988,
+    "max_chars": 999
+  }
+}

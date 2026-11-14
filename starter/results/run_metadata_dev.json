@@ -1,0 +1,54 @@
+{
+  "run_started_utc": "2026-11-14T03:01:15.951302+00:00",
+  "split": "dev",
+  "skip_ingest": false,
+  "embedding_model": "text-embedding-3-small",
+  "embedding_dimensions": 1536,
+  "vector_store": "PostgreSQL 16.16 + pgvector 0.8.7 (exact cosine distance <=>)",
+  "total_prompt_tokens": 94174,
+  "total_cost_usd": 0.001883,
+  "query_embed_tokens": 379,
+  "query_embed_seconds": 3.543,
+  "query_embed_cost_usd": 8e-06,
+  "search_seconds_by_strategy": {
+    "A": 1.2072,
+    "B": 1.033,
+    "C": 0.843
+  },
+  "strategy_ingest_metrics": {
+    "A": {
+      "chunk_count": 559,
+      "prompt_tokens": 49366,
+      "embed_seconds": 6.928,
+      "db_upsert_seconds": 0.456,
+      "total_ingest_seconds": 7.383,
+      "cost_usd": 0.000987
+    },
+    "B": {
+      "chunk_count": 328,
+      "prompt_tokens": 44429,
+      "embed_seconds": 2.683,
+      "db_upsert_seconds": 1.102,
+      "total_ingest_seconds": 3.785,
+      "cost_usd": 0.000889
+    },
+    "C": {
+      "chunk_count": 328,
+      "prompt_tokens": 0,
+      "embed_seconds": 0.0,
+      "db_upsert_seconds": 0.956,
+      "total_ingest_seconds": 0.956,
+      "cost_usd": 0.0,
+      "note": "Reuses Strategy B embeddings; adds SQL metadata filter at query time."
+    }
+  },
+  "idempotency_verification": {
+    "reingest_strategy": "B",
+    "reingest_doc_id": "nist-ai-100-1",
+    "count_before": 328,
+    "count_after": 328,
+    "stale_cleanup_probe_initial": 2,
+    "stale_cleanup_probe_after_shrink": 1,
+    "passed": true
+  }
+}

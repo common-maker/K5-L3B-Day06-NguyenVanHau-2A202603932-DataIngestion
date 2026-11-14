@@ -1,0 +1,48 @@
+{
+  "A:dev": {
+    "strategy": "A",
+    "split": "dev",
+    "total": 17,
+    "hit_at_1": 9,
+    "hit_at_1_ratio": "9/17",
+    "hit_at_1_pct": 52.9,
+    "evidence_hit_at_3": 11,
+    "evidence_hit_at_3_ratio": "11/17",
+    "evidence_hit_at_3_pct": 64.7,
+    "source_page_hit_at_3": 14,
+    "evidence_split_across_top3": 0,
+    "filter_compliance": null
+  },
+  "B:dev": {
+    "strategy": "B",
+    "split": "dev",
+    "total": 17,
+    "hit_at_1": 11,
+    "hit_at_1_ratio": "11/17",
+    "hit_at_1_pct": 64.7,
+    "evidence_hit_at_3": 13,
+    "evidence_hit_at_3_ratio": "13/17",
+    "evidence_hit_at_3_pct": 76.5,
+    "source_page_hit_at_3": 13,
+    "evidence_split_across_top3": 0,
+    "filter_compliance": null
+  },
+  "C:dev": {
+    "strategy": "C",
+    "split": "dev",
+    "total": 17,
+    "hit_at_1": 12,
+    "hit_at_1_ratio": "12/17",
+    "hit_at_1_pct": 70.6,
+    "evidence_hit_at_3": 14,
+    "evidence_hit_at_3_ratio": "14/17",
+    "evidence_hit_at_3_pct": 82.4,
+    "source_page_hit_at_3": 14,
+    "evidence_split_across_top3": 0,
+    "filter_compliance": {
+      "compliant": 3,
+      "total_filtered": 3,
+      "ratio": "3/3"
+    }
+  }
+}
